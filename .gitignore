@@ -1,0 +1,22 @@
+# Environment variables & secrets
+.env
+.venv/
+venv/
+env/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Project data
+data/
+
+# Tree-sitter built libraries
+build/
+tree-sitter-python/
+
+# Temporary scripts
+test_diff.py
+test_flow.py
+test_ts.py
