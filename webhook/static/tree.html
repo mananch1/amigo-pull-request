@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codebase Explorer - Amigo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="top-nav">
+            <a href="/">Reviews Portal</a>
+            <a href="/tree" class="active">Code Explorer</a>
+        </nav>
+        
+        <header>
+            <div class="logo">
+                <span class="emoji">📁</span>
+                <h1 id="repo-header-title">Codebase Architecture</h1>
+            </div>
+            <p class="subtitle">Interactive mapping of the AI Reviewer workspace.</p>
+            
+            <div class="repo-monitor-block">
+                <input type="text" id="repo-url-input" placeholder="e.g. https://github.com/tiangolo/fastapi">
+                <button id="btn-monitor-repo" class="btn primary-btn">Monitor Repository</button>
+            </div>
+            
+            <div id="ngrok-banner" class="ngrok-banner hidden">
+                <span>🔗 Webhook URL for GitHub:</span>
+                <code id="ngrok-url-display"></code>
+            </div>
+            <p id="repo-status-text" class="subtitle" style="display:none;"></p>
+        </header>
+
+        <main>
+            <div id="loader" class="loader">
+                <div class="spinner"></div>
+                <p>Scanning Filesystem...</p>
+            </div>
+            
+            <div id="tree-container" class="tree-container hidden">
+                <ul id="repo-tree" class="tree">
+                    <!-- Tree gets injected here -->
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentRepoId = localStorage.getItem('lastRepoId') || null;
+        let currentTreeName = 'amigo-pull-request';
+
+        document.getElementById('btn-monitor-repo').addEventListener('click', async () => {
+            const urlInput = document.getElementById('repo-url-input').value;
+            if(!urlInput) return;
+            
+            const btn = document.getElementById('btn-monitor-repo');
+            const statusText = document.getElementById('repo-status-text');
+            
+            btn.disabled = true;
+            statusText.style.display = 'block';
+            statusText.style.color = 'var(--text-main)';
+            statusText.innerText = "Cloning repository... this may take a moment.";
+            
+            try {
+                const res = await fetch('/api/repo', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: urlInput})
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    statusText.style.color = 'var(--success)';
+                    statusText.innerText = data.message;
+                    currentRepoId = data.repo_id;
+                    localStorage.setItem('lastRepoId', currentRepoId);
+                    
+                    if (data.github_name) {
+                        document.getElementById('repo-header-title').innerText = data.github_name;
+                        localStorage.setItem('lastRepoGithubName', data.github_name);
+                    }
+                    
+                    await loadTree();
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch(e) {
+                statusText.style.color = '#ff7b72';
+                statusText.innerText = e.message;
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        async function loadTree() {
+            const loader = document.getElementById('loader');
+            const treeContainer = document.getElementById('tree-container');
+            const ulRoot = document.getElementById('repo-tree');
+
+            ulRoot.innerHTML = '';
+            treeContainer.classList.add('hidden');
+            loader.classList.remove('hidden');
+            loader.innerHTML = `<div class="spinner"></div><p>Scanning Filesystem...</p>`;
+
+            try {
+                const fetchUrl = currentRepoId ? '/api/tree?repo_id=' + currentRepoId : '/api/tree';
+                const res = await fetch(fetchUrl);
+                const treeData = await res.json();
+                
+                if (treeData.error) throw new Error(treeData.error);
+                currentTreeName = treeData.name;
+                
+                loader.classList.add('hidden');
+                treeContainer.classList.remove('hidden');
+
+                const rootNode = createTreeNode(treeData, "", true);
+                ulRoot.appendChild(rootNode);
+
+            } catch (err) {
+                console.error("Tree Fetch Error:", err);
+                loader.innerHTML = `<p style="color: #f85149;">Error reading repository tree: ${err.message}</p>`;
+            }
+        }
+
+        async function fetchNgrok() {
+            try {
+                const res = await fetch('/api/ngrok');
+                const data = await res.json();
+                if(data.status === 'success' && data.url) {
+                    const banner = document.getElementById('ngrok-banner');
+                    const display = document.getElementById('ngrok-url-display');
+                    display.innerText = data.url;
+                    banner.classList.remove('hidden');
+                }
+            } catch(e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const cachedName = localStorage.getItem('lastRepoGithubName');
+            if (cachedName) {
+                document.getElementById('repo-header-title').innerText = cachedName;
+            }
+            loadTree();
+            fetchNgrok();
+        });
+
+        function createTreeNode(nodeData, parentPath = "", isRoot = false) {
+            const li = document.createElement('li');
+            li.className = 'node';
+
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'node-label';
+
+            const isFolder = nodeData.type === 'directory';
+            const currentPath = parentPath ? `${parentPath}/${nodeData.name}` : nodeData.name;
+            
+            // Icon logic
+            let iconStr = '📄';
+            if (isFolder) iconStr = '📁';
+            else if (nodeData.name.endsWith('.py')) iconStr = '🐍';
+            else if (nodeData.name.endsWith('.json')) iconStr = '📋';
+            else if (nodeData.name.endsWith('.md')) iconStr = '📝';
+            else if (nodeData.name.endsWith('.html') || nodeData.name.endsWith('.css') || nodeData.name.endsWith('.js')) iconStr = '🌐';
+
+            const caretHtml = isFolder ? `<span class="caret">▶</span>` : '';
+            const className = isFolder ? 'is-folder' : 'is-file';
+
+            labelDiv.innerHTML = `
+                ${caretHtml}
+                <span class="icon">${iconStr}</span>
+                <span class="${className}">${nodeData.name}</span>
+            `;
+
+            li.appendChild(labelDiv);
+
+            if (isFolder && nodeData.children && nodeData.children.length > 0) {
+                const ul = document.createElement('ul');
+                
+                nodeData.children.forEach(child => {
+                    ul.appendChild(createTreeNode(child, currentPath, false));
+                });
+                
+                li.appendChild(ul);
+
+                // Interaction
+                labelDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const caret = labelDiv.querySelector('.caret');
+                    ul.classList.toggle('active');
+                    if(ul.classList.contains('active')) {
+                        caret.classList.add('caret-down');
+                        labelDiv.querySelector('.icon').innerText = '📂';
+                    } else {
+                        caret.classList.remove('caret-down');
+                        labelDiv.querySelector('.icon').innerText = '📁';
+                    }
+                });
+
+                // Auto-expand root
+                if (isRoot) {
+                    ul.classList.add('active');
+                    labelDiv.querySelector('.caret').classList.add('caret-down');
+                    labelDiv.querySelector('.icon').innerText = '📂';
+                }
+            } else if (!isFolder && nodeData.name.endsWith('.py')) {
+                // If it's a python file, allow AST expanding
+                const astContainer = document.createElement('ul');
+                astContainer.className = 'ast-container';
+                li.appendChild(astContainer);
+
+                labelDiv.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    
+                    if (astContainer.classList.contains('active')) {
+                        astContainer.classList.remove('active');
+                        return;
+                    }
+
+                    // Avoid re-fetching if already loaded
+                    if (astContainer.children.length > 0) {
+                        astContainer.classList.add('active');
+                        return;
+                    }
+
+                    astContainer.classList.add('active');
+                    astContainer.innerHTML = `<span class="ast-loader">Parsing AST via Tree-Sitter...</span>`;
+                    
+                    try {
+                        const pathQuery = encodeURIComponent(currentPath.replace(currentTreeName + "/", ""));
+                        const finalUrl = currentRepoId ? `/api/ast?filepath=${pathQuery}&repo_id=${currentRepoId}` : `/api/ast?filepath=${pathQuery}`;
+                        
+                        const response = await fetch(finalUrl);
+                        const astData = await response.json();
+                        
+                        if(astData.error) throw new Error(astData.error);
+
+                        let htmlStr = '';
+                        
+                        // Parse Imports
+                        if(astData.data.imports && astData.data.imports.length > 0) {
+                            astData.data.imports.forEach(imp => {
+                                htmlStr += `<span class="ast-import">🔸 Import: ${imp}</span>`;
+                            });
+                        }
+
+                        // Parse Chunks
+                        if(astData.data.chunks && astData.data.chunks.length > 0) {
+                            astData.data.chunks.forEach((chunk, idx) => {
+                                htmlStr += `
+                                    <div class="ast-chunk-wrapper">
+                                      <span class="ast-function" style="cursor:pointer;" onclick="document.getElementById('code-${currentPath}-${idx}').classList.toggle('active')">
+                                          🔹 def ${chunk.name}() 
+                                          <span style="color:#58a6ff;font-size:0.7rem;">(L${chunk.start_line}-${chunk.end_line})</span>
+                                      </span>
+                                      <div id="code-${currentPath}-${idx}" class="ast-code-block">${chunk.code.replace(/</g, "&lt;")}</div>
+                                `;
+                                if(chunk.calls && chunk.calls.length > 0) {
+                                    chunk.calls.forEach(call => {
+                                        htmlStr += `<span class="ast-call">↳ Calls: ${call}()</span>`;
+                                    });
+                                }
+                                htmlStr += `</div>`;
+                            });
+                        }
+
+                        if(htmlStr === '') htmlStr = '<span class="ast-loader">No functions or imports found.</span>';
+                        astContainer.innerHTML = htmlStr;
+
+                    } catch (err) {
+                        astContainer.innerHTML = `<span style="color: #ff7b72; font-size: 0.8rem;">AST Failed: ${err.message}</span>`;
+                    }
+                });
+            }
+
+            return li;
+        }
+    </script>
+</body>
+</html>

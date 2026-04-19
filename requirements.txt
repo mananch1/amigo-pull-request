@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+groq
+faiss-cpu
+numpy
+google-genai
+tree-sitter
+tree-sitter-python
+GitPython
+datasets
+swebench

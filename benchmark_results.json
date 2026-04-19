@@ -1,0 +1,70 @@
+[
+    {
+        "instance_id": "astropy__astropy-12907",
+        "timestamp": 1776578714.3465903,
+        "error": "[WinError 2] The system cannot find the file specified",
+        "pass_at_1": false
+    },
+    {
+        "instance_id": "astropy__astropy-12907",
+        "timestamp": 1776578790.766614,
+        "error": "[WinError 2] The system cannot find the file specified",
+        "pass_at_1": false
+    },
+    {
+        "instance_id": "astropy__astropy-12907",
+        "timestamp": 1776578859.5508883,
+        "prompt_tokens_gemini": 0,
+        "completion_tokens_gemini": 0,
+        "prompt_tokens_groq": 773,
+        "completion_tokens_groq": 422,
+        "latency_planning_seconds": 1.64,
+        "latency_execution_seconds": 1.95,
+        "pass_at_1": false,
+        "patch_applied": false
+    },
+    {
+        "instance_id": "astropy__astropy-12907",
+        "timestamp": 1776578966.7302754,
+        "prompt_tokens_gemini": 0,
+        "completion_tokens_gemini": 0,
+        "prompt_tokens_groq": 773,
+        "completion_tokens_groq": 710,
+        "latency_planning_seconds": 1.13,
+        "latency_execution_seconds": 3.88,
+        "pass_at_1": false,
+        "patch_applied": false
+    },
+    {
+        "instance_id": "astropy__astropy-12907",
+        "timestamp": 1776579073.4618857,
+        "prompt_tokens_gemini": 13212,
+        "completion_tokens_gemini": 983,
+        "prompt_tokens_groq": 3471,
+        "completion_tokens_groq": 737,
+        "latency_planning_seconds": 69.58,
+        "latency_execution_seconds": 2.56,
+        "pass_at_1": false,
+        "patch_applied": false
+    },
+    {
+        "instance_id": "astropy__astropy-12907",
+        "timestamp": 1776579427.5292387,
+        "prompt_tokens_gemini": 13212,
+        "completion_tokens_gemini": 480,
+        "prompt_tokens_groq": 4461,
+        "completion_tokens_groq": 957,
+        "latency_planning_seconds": 56.47,
+        "latency_execution_seconds": 24.41
+    },
+    {
+        "instance_id": "astropy__astropy-12907",
+        "timestamp": 1776595244.3665879,
+        "prompt_tokens_gemini": 13212,
+        "completion_tokens_gemini": 830,
+        "prompt_tokens_groq": 4839,
+        "completion_tokens_groq": 937,
+        "latency_planning_seconds": 90.73,
+        "latency_execution_seconds": 4.16
+    }
+]

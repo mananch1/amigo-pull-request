@@ -1,0 +1,99 @@
+diff --git a/astropy/modeling/separable.py b/astropy/modeling/separable.py
+--- a/astropy/modeling/separable.py
++++ b/astropy/modeling/separable.py
+@@ -155,6 +155,13 @@
+     """
+     if isinstance(transform, CompoundModel):
+         sepleft = _separable(transform.left)
+         sepright = _separable(transform.right)
++        # Recursively call _separable for nested CompoundModel instances
++        if isinstance(transform.left, CompoundModel):
++            sepleft = _separable(transform.left)
++        if isinstance(transform.right, CompoundModel):
++            sepright = _separable(transform.right)
+         return _operators[transform.op](sepleft, sepright)
+     elif isinstance(transform, Model):
+         return _coord_matrix(transform, 'left', transform.n_outputs)
+ 
+@@ -231,6 +238,13 @@
+ def _get_inputs_outputs_map(model):
+     """
+     Determine which inputs of a model affect which outputs.
+ 
++    This function is now recursive for CompoundModel nodes to handle nested
++    CompoundModel instances and accurately determine input-output dependencies.
++    """
++    if isinstance(model, CompoundModel):
++        left_map = _get_inputs_outputs_map(model.left)
++        right_map = _get_inputs_outputs_map(model.right)
++        # Combine the input-output maps of the left and right submodels
++        combined_map = np.hstack([left_map, right_map])
++        return combined_map
+     # Original implementation for non-CompoundModel instances
+     inputs = model.inputs
+     outputs = model.outputs
+     map = np.zeros((len(outputs), len(inputs)))
+diff --git a/astropy/modeling/tests/test_separable.py b/astropy/modeling/tests/test_separable.py
+--- a/astropy/modeling/tests/test_separable.py
++++ b/astropy/modeling/tests/test_separable.py
+@@ -123,6 +123,17 @@
+ def test_custom_model_separable():
+     @custom_model
+     def model_a(x):
+         return x
++
++def test_nested_compound_model_separable():
++    from astropy.modeling.models import Linear1D, Pix2Sky_TAN
++    cm = Linear1D(10) & Linear1D(5)
++    nested_cm = Pix2Sky_TAN() & cm
++    expected_matrix = np.array([[True, True, False, False], [True, True, False, False], [False, False, True, False], [False, False, False, True]])
++    assert np.array_equal(separability_matrix(nested_cm), expected_matrix)
++
++
+ def test_custom_model_separable():
+     @custom_model
+     def model_a(x):
+         return x
+diff --git a/astropy/modeling/core.py b/astropy/modeling/core.py
+--- a/astropy/modeling/core.py
++++ b/astropy/modeling/core.py
+@@ -0,0 +1,6 @@
++
++class ModelDefinitionError(Exception):
++    pass
++
++class CompoundModel:
++    def __init__(self, left, right, op):
++        self.left = left
++        self.right = right
++        self.op = op
++        self.inputs = left.inputs + right.inputs
++        self.outputs = left.outputs + right.outputs
++        self.separable = left.separable and right.separable
++        self._calculate_separability_matrix = lambda: NotImplemented
++
++    def _calculate_separability_matrix(self):
++        # This method should be overridden in subclasses to provide the actual implementation
++        pass
+diff --git a/astropy/modeling/models.py b/astropy/modeling/models.py
+--- a/astropy/modeling/models.py
++++ b/astropy/modeling/models.py
+@@ -0,0 +1,6 @@
++
++class Linear1D:
++    def __init__(self, slope):
++        self.slope = slope
++        self.inputs = ['x']
++        self.outputs = ['y']
++        self.separable = True
++
++class Pix2Sky_TAN:
++    def __init__(self):
++        self.inputs = ['x', 'y']
++        self.outputs = ['ra', 'dec']
++        self.separable = False
++        self._calculate_separability_matrix = lambda: NotImplemented
++
++    def _calculate_separability_matrix(self):
++        # This method should be overridden in subclasses to provide the actual implementation
++        pass

@@ -64,12 +64,20 @@ Focus on:
 3. Performance or security issues
 4. Actionable feedback
 
-If the diff looks perfectly fine and has no issues, simply output "Looks good to me!". Provide your review in markdown format.
+You MUST output your response in strict JSON format. Do not include markdown wrappers around the JSON.
+Schema:
+{{
+    "file": "{filename}",
+    "summary": "Overall markdown review text",
+    "issues": ["Issue 1: description", "Issue 2: description"]
+}}
+If the diff looks perfectly fine, simply provide an empty list for "issues".
 """
         
         response = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.3-70b-versatile",
+            response_format={"type": "json_object"},
         )
         reviews.append({
             "file": filename,

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigo - Pull Request Reviewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="top-nav">
+            <a href="/" class="active">Reviews Portal</a>
+            <a href="/tree">Code Explorer</a>
+        </nav>
+        
+        <header>
+            <div class="logo">
+                <span class="emoji">🤖</span>
+                <h1>Amigo Agentic PR Portal</h1>
+            </div>
+            <p class="subtitle">Review intelligently. Auto-fix autonomously.</p>
+            <div id="ngrok-banner" class="ngrok-banner hidden">
+                <span>🔗 Webhook URL for GitHub:</span>
+                <code id="ngrok-url-display"></code>
+            </div>
+        </header>
+
+        <main>
+            <div id="loader" class="loader">
+                <div class="spinner"></div>
+                <p>Loading Active Pull Requests...</p>
+            </div>
+            
+            <div id="reviews-container" class="reviews-grid hidden">
+                <!-- Dynamic Review Cards will be injected here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Agentic Fix Modal -->
+    <div id="fix-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Agentic Fixer Initializing</h2>
+            <div class="fixer-animation">
+                <div class="scanning-bar"></div>
+            </div>
+            <p id="fix-status-text">Drafting resolution plan...</p>
+            <div id="fix-result" class="hidden">
+                <p class="success-text">✅ Patch successfully generated!</p>
+                <div class="code-preview" id="fix-patch-preview"></div>
+                <button class="btn primary-btn mt-4" onclick="closeModal()">Close & View Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Fetch and display Ngrok URL
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/ngrok');
+                const data = await res.json();
+                if(data.status === 'success' && data.url) {
+                    const banner = document.getElementById('ngrok-banner');
+                    const display = document.getElementById('ngrok-url-display');
+                    display.innerText = data.url;
+                    banner.classList.remove('hidden');
+                }
+            } catch(e) {}
+        });
+    </script>
+</body>
+</html>

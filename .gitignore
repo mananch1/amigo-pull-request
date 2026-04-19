@@ -20,3 +20,6 @@ tree-sitter-python/
 test_diff.py
 test_flow.py
 test_ts.py
+
+
+.venv-wsl
